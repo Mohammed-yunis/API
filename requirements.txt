@@ -1,0 +1,8 @@
+gunicorn==20.0.4
+Flask
+tensorflow
+numpy
+googletrans==4.0.0-rc1
+pandas
+Pillow
+openpyxl
