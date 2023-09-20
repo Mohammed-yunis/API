@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classifier</title>
+</head>
+<body>
+    <h1>Image Classifier</h1>
+    <form action="/predictTourism" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <label for="language">Select Language:</label>
+        <select name="language" id="language">
+            <option value="en">English</option>
+            <option value="de">German</option>
+            <option value="ar">Arabic</option>
+        <!-- Add more language options as needed -->
+        </select>
+        <button type="submit">Upload and Predict</button>
+    </form>
+    <form action="/predictHieroglyphs" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <button type="submit">Upload and Predict</button>
+    </form>
+
+    <div id="result">
+        {% if prediction %}
+        <h2>Prediction:</h2>
+        <p>{{ prediction }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
