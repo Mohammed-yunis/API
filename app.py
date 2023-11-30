@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, request, jsonify, render_template
 from tensorflow.keras.models import load_model
 from PIL import Image
@@ -150,4 +152,5 @@ def predict_hieroglyphs_api():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False, port=int(os.environ.get('PORT', 8080)))
+
