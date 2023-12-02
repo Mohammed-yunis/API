@@ -1,13 +1,10 @@
-import os
-
-from flask import Flask, request, jsonify, render_template
+# app.py
+import streamlit as st
 from tensorflow.keras.models import load_model
 from PIL import Image
 import numpy as np
 from googletrans import Translator
 import pandas as pd
-
-app = Flask(__name__)
 
 # Load models and data
 model_tourism = load_model('model_tourism.h5')
@@ -59,11 +56,13 @@ class_hieroglyphs_names = ['100', 'Among', 'Angry', 'Ankh', 'Aroura', 'At', 'Bad
                            'You']
 
 
-def preprocess_image(image_path):
-    image = Image.open(image_path).resize((224, 224))
+@st.cache
+def preprocess_image(image):
+    image = Image.open(image).resize((224, 224))
     return np.array(image) / 255.0
 
 
+@st.cache
 def get_translation(text, lang):
     if lang == 'en':
         return text
@@ -71,86 +70,40 @@ def get_translation(text, lang):
     return translator.translate(text, src='en', dest=lang).text
 
 
-@app.route('/')
-def index():
-    return render_template('index.html', prediction=None)
-
-
-@app.route('/predictTourism', methods=['POST'])
 def predict_tourism():
-    try:
-        image_file = request.files['image']
-        selected_language = request.form['language']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
+    st.title("Image Classifier")
+    st.subheader("Tourism Prediction")
 
-        processed_image = preprocess_image(image_path)
+    image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+    if image_file is not None:
+        selected_language = st.selectbox("Select Language:", ["English", "German", "Arabic"])
+        processed_image = preprocess_image(image_file)
         predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
         predicted_class_name = class_tourism_names[predicted_class]
         translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
 
-        return render_template('index.html', prediction=translated_text)
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
+        st.subheader("Prediction:")
+        st.write(translated_text)
 
 
-@app.route('/predictTourismAPI', methods=['POST'])
-def predict_tourism_api():
-    try:
-        image_file = request.files['image']
-        selected_language = request.form['language']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
-
-        processed_image = preprocess_image(image_path)
-        predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_tourism_names[predicted_class]
-        translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
-
-        return jsonify({
-            "information": translated_text,
-            "name": predicted_class_name
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-@app.route('/predictHieroglyphs', methods=['POST'])
 def predict_hieroglyphs():
-    try:
-        image_file = request.files['image']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
+    st.title("Image Classifier")
+    st.subheader("Hieroglyphs Prediction")
 
-        processed_image = preprocess_image(image_path)
+    image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+    if image_file is not None:
+        processed_image = preprocess_image(image_file)
         predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
         predicted_class_name = class_hieroglyphs_names[predicted_class]
 
-        return render_template('index.html', prediction=predicted_class_name)
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
+        st.subheader("Prediction:")
+        st.write(predicted_class_name)
 
 
-@app.route('/predictHieroglyphsAPI', methods=['POST'])
-def predict_hieroglyphs_api():
-    try:
-        image_file = request.files['image']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
+# Choose the prediction type using radio buttons
+prediction_type = st.radio("Choose prediction type:", ["Tourism", "Hieroglyphs"])
 
-        processed_image = preprocess_image(image_path)
-        predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_hieroglyphs_names[predicted_class]
-
-        return jsonify({"class": predicted_class_name})
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-if __name__ == '__main__':
-    app.run(debug=False, port=int(os.environ.get('PORT', 8080)))
-
+if prediction_type == "Tourism":
+    predict_tourism()
+else:
+    predict_hieroglyphs()
