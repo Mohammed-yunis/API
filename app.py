@@ -1,12 +1,14 @@
-# app.py
-import streamlit as st
+from flask import Flask, request, render_template, jsonify
+from flask_restful import Api, Resource
 from tensorflow.keras.models import load_model
 from PIL import Image
 import numpy as np
 from googletrans import Translator
 import pandas as pd
 
-# Load models and data
+app = Flask(__name__)
+api = Api(app)
+
 model_tourism = load_model('model_tourism.h5')
 model_hieroglyphs = load_model('model_hieroglyphs.h5')
 
@@ -56,13 +58,11 @@ class_hieroglyphs_names = ['100', 'Among', 'Angry', 'Ankh', 'Aroura', 'At', 'Bad
                            'You']
 
 
-@st.cache
-def preprocess_image(image):
-    image = Image.open(image).resize((224, 224))
+def preprocess_image(image_path):
+    image = Image.open(image_path).resize((224, 224))
     return np.array(image) / 255.0
 
 
-@st.cache
 def get_translation(text, lang):
     if lang == 'en':
         return text
@@ -70,40 +70,53 @@ def get_translation(text, lang):
     return translator.translate(text, src='en', dest=lang).text
 
 
-def predict_tourism():
-    st.title("Image Classifier")
-    st.subheader("Tourism Prediction")
+class PredictTourism(Resource):
+    def post(self):
+        try:
+            image_file = request.files['image']
+            selected_language = request.form['language']
+            image_path = "temp_image.jpg"
+            image_file.save(image_path)
 
-    image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-    if image_file is not None:
-        selected_language = st.selectbox("Select Language:", ["English", "German", "Arabic"])
-        processed_image = preprocess_image(image_file)
-        predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_tourism_names[predicted_class]
-        translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
+            processed_image = preprocess_image(image_path)
+            predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
+            predicted_class_name = class_tourism_names[predicted_class]
+            translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
 
-        st.subheader("Prediction:")
-        st.write(translated_text)
+            return jsonify({
+                "information": translated_text,
+                "name": predicted_class_name
+            })
 
-
-def predict_hieroglyphs():
-    st.title("Image Classifier")
-    st.subheader("Hieroglyphs Prediction")
-
-    image_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-    if image_file is not None:
-        processed_image = preprocess_image(image_file)
-        predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_hieroglyphs_names[predicted_class]
-
-        st.subheader("Prediction:")
-        st.write(predicted_class_name)
+        except Exception as e:
+            return jsonify({"error": str(e)})
 
 
-# Choose the prediction type using radio buttons
-prediction_type = st.radio("Choose prediction type:", ["Tourism", "Hieroglyphs"])
+class PredictHieroglyphs(Resource):
+    def post(self):
+        try:
+            image_file = request.files['image']
+            image_path = "temp_image.jpg"
+            image_file.save(image_path)
 
-if prediction_type == "Tourism":
-    predict_tourism()
-else:
-    predict_hieroglyphs()
+            processed_image = preprocess_image(image_path)
+            predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
+            predicted_class_name = class_hieroglyphs_names[predicted_class]
+
+            return jsonify({"class": predicted_class_name})
+
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
+
+api.add_resource(PredictTourism, '/predictTourismAPI')
+api.add_resource(PredictHieroglyphs, '/predictHieroglyphsAPI')
+
+
+@app.route('/')
+def index():
+    return render_template('index.html', prediction=None)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
