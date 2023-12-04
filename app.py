@@ -7,7 +7,6 @@ import pandas as pd
 
 app = Flask(__name__)
 
-# Load models and data
 model_tourism = load_model('model_tourism.h5')
 model_hieroglyphs = load_model('model_hieroglyphs.h5')
 
