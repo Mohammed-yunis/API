@@ -7,18 +7,18 @@
 </head>
 <body>
     <h1>Image Classifier</h1>
-    <form action="/predictTourismAPI" method="POST" enctype="multipart/form-data">
+    <form action="/predictTourism" method="POST" enctype="multipart/form-data">
         <input type="file" name="image" accept="image/*" required>
         <label for="language">Select Language:</label>
         <select name="language" id="language">
             <option value="en">English</option>
             <option value="de">German</option>
             <option value="ar">Arabic</option>
-            <!-- Add more language options as needed -->
+        <!-- Add more language options as needed -->
         </select>
         <button type="submit">Upload and Predict</button>
     </form>
-    <form action="/predictHieroglyphsAPI" method="POST" enctype="multipart/form-data">
+    <form action="/predictHieroglyphs" method="POST" enctype="multipart/form-data">
         <input type="file" name="image" accept="image/*" required>
         <button type="submit">Upload and Predict</button>
     </form>
