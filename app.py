@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template, jsonify
+from flask_restful import Api, Resource
 from tensorflow.keras.models import load_model
 from PIL import Image
 import numpy as np
@@ -6,6 +7,7 @@ from googletrans import Translator
 import pandas as pd
 
 app = Flask(__name__)
+api = Api(app)
 
 model_tourism = load_model('model_tourism.h5')
 model_hieroglyphs = load_model('model_hieroglyphs.h5')
@@ -68,84 +70,51 @@ def get_translation(text, lang):
     return translator.translate(text, src='en', dest=lang).text
 
 
+class PredictTourism(Resource):
+    def post(self):
+        try:
+            image_file = request.files['image']
+            selected_language = request.form['language']
+            image_path = "temp_image.jpg"
+            image_file.save(image_path)
+
+            processed_image = preprocess_image(image_path)
+            predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
+            predicted_class_name = class_tourism_names[predicted_class]
+            translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
+
+            return jsonify({
+                "information": translated_text,
+                "name": predicted_class_name
+            })
+
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
+
+class PredictHieroglyphs(Resource):
+    def post(self):
+        try:
+            image_file = request.files['image']
+            image_path = "temp_image.jpg"
+            image_file.save(image_path)
+
+            processed_image = preprocess_image(image_path)
+            predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
+            predicted_class_name = class_hieroglyphs_names[predicted_class]
+
+            return jsonify({"class": predicted_class_name})
+
+        except Exception as e:
+            return jsonify({"error": str(e)})
+
+
+api.add_resource(PredictTourism, '/predictTourismAPI')
+api.add_resource(PredictHieroglyphs, '/predictHieroglyphsAPI')
+
 @app.route('/')
 def index():
     return render_template('index.html', prediction=None)
-
-
-@app.route('/predictTourism', methods=['POST'])
-def predict_tourism():
-    try:
-        image_file = request.files['image']
-        selected_language = request.form['language']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
-
-        processed_image = preprocess_image(image_path)
-        predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_tourism_names[predicted_class]
-        translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
-
-        return render_template('index.html', prediction=translated_text)
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-@app.route('/predictTourismAPI', methods=['POST'])
-def predict_tourism_api():
-    try:
-        image_file = request.files['image']
-        selected_language = request.form['language']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
-
-        processed_image = preprocess_image(image_path)
-        predicted_class = np.argmax(model_tourism.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_tourism_names[predicted_class]
-        translated_text = get_translation(data_dict.get(predicted_class_name, ''), selected_language)
-
-        return jsonify({
-            "information": translated_text,
-            "name": predicted_class_name
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-@app.route('/predictHieroglyphs', methods=['POST'])
-def predict_hieroglyphs():
-    try:
-        image_file = request.files['image']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
-
-        processed_image = preprocess_image(image_path)
-        predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_hieroglyphs_names[predicted_class]
-
-        return render_template('index.html', prediction=predicted_class_name)
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-
-@app.route('/predictHieroglyphsAPI', methods=['POST'])
-def predict_hieroglyphs_api():
-    try:
-        image_file = request.files['image']
-        image_path = "temp_image.jpg"
-        image_file.save(image_path)
-
-        processed_image = preprocess_image(image_path)
-        predicted_class = np.argmax(model_hieroglyphs.predict(np.expand_dims(processed_image, axis=0)))
-        predicted_class_name = class_hieroglyphs_names[predicted_class]
-
-        return jsonify({"class": predicted_class_name})
-
-    except Exception as e:
-        return jsonify({"error": str(e)})
 
 
 if __name__ == '__main__':
